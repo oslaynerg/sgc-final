@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Estudiantes | {{ aldea.nombre }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+    <span style="color: #666; font-size: 0.9em;">Ubicación:</span>
+    <h3 style="margin: 5px 0 0 0; color: #004d99;">
+        {{ aldea.nombre }} 
+        <small style="color: #888; font-weight: normal; font-size: 0.8em;">({{ aldea.codigo }})</small>
+    </h3>
+    <div style="font-size: 0.9em; color: #555; margin-top: 5px;">
+        {{ aldea.parroquia.municipio.estado.nombre }} > {{ aldea.parroquia.municipio.nombre }} > {{ aldea.parroquia.nombre }}
+    </div>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+    
+    <form method="GET" action="" style="display: flex; gap: 5px; flex: 1; max-width: 400px;">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Buscar por Cédula o Nombre..." 
+               style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+        <button type="submit" class="btn btn-primary" style="padding: 8px 15px;">🔍 Buscar</button>
+        {% if search_query %}
+            <a href="{{ url_for('listar_estudiantes', aldea_id=aldea.id) }}" class="btn" style="background: #6c757d; color: white; padding: 8px 12px; text-decoration: none;">✕</a>
+        {% endif %}
+    </form>
+
+    <a href="{{ url_for('agregar_estudiante', aldea_id=aldea.id) }}" class="btn btn-success">
+        🎓 Nuevo Estudiante
+    </a>
+</div>
+
+<div style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
+    <div style="overflow-x: auto;">
+        {% if estudiantes_list.items %}
+            <table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 0.9em;">
+                <thead>
+                    <tr style="background-color: #004d99; color: white; text-align: left;">
+                        <th style="padding: 12px; width: 50px;">Tipo</th>
+                        <th style="padding: 12px;">Cédula</th>
+                        <th style="padding: 12px;">Nombre y Apellido</th>
+                        
+                        <th style="padding: 12px;">Prog.</th>
+                        <th style="padding: 12px;">Carrera</th>
+                        <th style="padding: 12px;">Tramo</th>
+                        <th style="padding: 12px;">Período</th>
+                        
+                        <th style="padding: 12px;">Género</th>
+                        <th style="padding: 12px;">Edad</th>
+                        <th style="padding: 12px;">Contacto</th>
+                        
+                        <th style="padding: 12px; text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for estudiante in estudiantes_list.items %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">
+                                {{ estudiante.tipo_documento }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; font-weight: bold; color: #333;">{{ estudiante.numero_documento }}</td>
+                        <td style="padding: 12px;">{{ estudiante.nombre_apellido }}</td>
+
+                        <td style="padding: 12px; color: #555;">{{ estudiante.carrera.tipo }}</td>
+                        <td style="padding: 12px; color: #004d99; font-weight: 500;">{{ estudiante.carrera.nombre }}</td>
+                        
+                        <td style="padding: 12px;">{{ estudiante.nombre_tramo }}</td>
+                        <td style="padding: 12px;">{{ estudiante.nombre_periodo }}</td>
+
+                        <td style="padding: 12px;">{{ estudiante.genero }}</td>
+                        <td style="padding: 12px;">{{ estudiante.edad }}</td>
+                        <td style="padding: 12px; font-size: 0.85em; color: #666;">
+                            {% if estudiante.telefono %}📞 {{ estudiante.telefono }}<br>{% endif %}
+                            {% if estudiante.correo %}✉️ {{ estudiante.correo }}{% endif %}
+                        </td>
+
+                        <td style="padding: 12px; text-align: center;">
+                            <div style="display: flex; justify-content: center; gap: 5px;">
+                                <a href="{{ url_for('editar_estudiante', estudiante_id=estudiante.id) }}" class="btn" 
+                                   style="background: #ffc107; color: black; padding: 5px 10px; font-size: 0.85em;" title="Editar">
+                                    ✏️
+                                </a>
+                                
+                                <form method="POST" action="{{ url_for('eliminar_estudiante', estudiante_id=estudiante.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn" 
+                                            onclick="return confirm('¿Eliminar al estudiante {{ estudiante.nombre_apellido }}?')" 
+                                            style="background: #dc3545; color: white; padding: 5px 10px; font-size: 0.85em; border: none;" title="Eliminar">
+                                        🗑️
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 40px; text-align: center; color: #666;">
+                <h3>📭 Sin resultados</h3>
+                <p>No se encontraron estudiantes en esta aldea{% if search_query %} con la búsqueda "{{ search_query }}"{% endif %}.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if estudiantes_list.pages > 1 %}
+<div style="margin-top: 20px; display: flex; justify-content: center; gap: 5px;">
+    {% if estudiantes_list.has_prev %}
+        <a href="{{ url_for('listar_estudiantes', aldea_id=aldea.id, page=estudiantes_list.prev_num, q=search_query) }}" class="btn" style="background: white; border: 1px solid #ccc; color: #333;">&laquo; Anterior</a>
+    {% endif %}
+
+    <span style="padding: 8px 12px; background: #e9ecef; border-radius: 4px;">
+        Página {{ estudiantes_list.page }} de {{ estudiantes_list.pages }}
+    </span>
+
+    {% if estudiantes_list.has_next %}
+        <a href="{{ url_for('listar_estudiantes', aldea_id=aldea.id, page=estudiantes_list.next_num, q=search_query) }}" class="btn" style="background: white; border: 1px solid #ccc; color: #333;">Siguiente &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="margin-top: 20px;">
+    <a href="{{ url_for('listar_aldeas', parroquia_id=aldea.parroquia.id) }}" style="text-decoration: none; color: #004d99; font-weight: bold;">
+        &larr; Volver a Aldeas de {{ aldea.parroquia.nombre }}
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Editar Aldea | SGC{% endblock %}
+
+{% block content %}
+    <h1>Editar Aldea: {{ aldea.nombre }}</h1>
+    <form method="POST" action="">
+        <label>Código de Aldea:</label>
+        <input type="text" name="codigo" value="{{ aldea.codigo }}" required>
+        
+        <label>Nombre de la Aldea:</label>
+        <input type="text" name="nombre" value="{{ aldea.nombre }}" required>
+        
+        <button type="submit">Guardar Cambios</button>
+    </form>
+    <p><a href="{{ url_for('listar_aldeas', parroquia_id=aldea.parroquia_id) }}">Cancelar</a></p>
+{% endblock %}

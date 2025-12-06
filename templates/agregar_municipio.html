@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Agregar Municipio | SGC{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 0 auto;">
+    <div style="background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        
+        <h1 style="margin-top: 0; text-align: center; font-size: 1.6em; color: #004d99;">
+            🏙️ Agregar Municipio
+        </h1>
+        <p style="text-align: center; color: #666; margin-bottom: 25px;">
+            Asociado al Estado: <strong>{{ estado.nombre }}</strong>
+        </p>
+
+        {% if error %}
+            <div class="flash danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="">
+            <div style="margin-bottom: 25px;">
+                <label for="nombre" style="font-weight: bold; display: block; margin-bottom: 5px;">Nombre del Municipio:</label>
+                <input type="text" id="nombre" name="nombre" placeholder="Ej: MATURIN" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            
+            <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-size: 1.1em;">
+                💾 Guardar Municipio
+            </button>
+        </form>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('listar_municipios', estado_id=estado.id) }}" style="color: #666; text-decoration: none;">Cancelar y Volver</a>
+    </div>
+</div>
+{% endblock %}

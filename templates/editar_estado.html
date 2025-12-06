@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Estado | SGC</title>
+    </head>
+<body>
+    <h1>Editar Estado: {{ estado.nombre }}</h1>
+
+    {# Bloque de mensajes flash #}
+    
+    <form method="POST" action="">
+        <label for="nombre">Nuevo Nombre del Estado:</label>
+        <input type="text" id="nombre" name="nombre" value="{{ estado.nombre }}" required>
+        
+        <button type="submit">Actualizar Estado</button>
+    </form>
+
+    <p><a href="{{ url_for('listar_estados') }}">Volver al Listado de Estados</a></p>
+</body>
+</html>

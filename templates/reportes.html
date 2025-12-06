@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes Avanzados | SGC{% endblock %}
+
+{% block content %}
+
+<style>
+    .reporte-wrapper { display: flex; flex-wrap: wrap; gap: 20px; }
+    .sidebar-filtros { 
+        flex: 0 0 280px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; height: fit-content; 
+    }
+    .main-area { flex: 1; min-width: 0; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 4px; color: #555; }
+    .form-group select, .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+    
+    .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .data-table { width: 100%; border-collapse: collapse; min-width: 1400px; font-size: 0.85em; }
+    .data-table thead tr { background-color: #004d99; color: white; text-align: left; }
+    .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    .data-table tbody tr:nth-of-type(even) { background-color: #f8f9fa; }
+
+    @media print {
+        .sidebar-filtros, .navbar, footer, .btn-print { display: none !important; }
+        .reporte-wrapper { display: block; }
+        .data-table { border: 1px solid #000; font-size: 10px; }
+        .data-table th { background-color: #ddd !important; color: black !important; }
+    }
+</style>
+
+<div class="reporte-wrapper">
+    
+    <div class="sidebar-filtros">
+        <h3 style="margin-top: 0; color: #004d99;">📊 Filtros</h3>
+        <form method="POST" action="" id="formReporte">
+            
+            <div class="form-group">
+                <label>Tipo de Consulta:</label>
+                <select name="tipo_reporte" onchange="this.form.submit()" style="background-color: #e3f2fd; border-color: #2196F3; font-weight: bold;">
+                    <option value="estudiantes" {% if tipo_reporte == 'estudiantes' %}selected{% endif %}>Estudiantes</option>
+                    <option value="personal" {% if tipo_reporte == 'personal' %}selected{% endif %}>Personal</option>
+                </select>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+
+            <div class="form-group">
+                <label>Nacionalidad:</label>
+                <select name="tipo_documento">
+                    <option value="">Todos</option>
+                    <option value="V">Venezolano (V)</option>
+                    <option value="E">Extranjero (E)</option>
+                </select>
+            </div>
+
+            <h4 style="margin: 15px 0 10px 0; color: #004d99; font-size: 0.95em;">📍 Ubicación</h4>
+            
+            <div class="form-group"><label>1. Estado:</label><select name="estado_id" id="estado_select"><option value="">Todos</option>{% for e in estados %}<option value="{{ e.id }}">{{ e.nombre }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>2. Municipio:</label><select name="municipio_id" id="municipio_select" disabled><option value="">Seleccione Estado...</option></select></div>
+            <div class="form-group"><label>3. Parroquia:</label><select name="parroquia_id" id="parroquia_select" disabled><option value="">Seleccione Municipio...</option></select></div>
+            <div class="form-group"><label>4. Aldea:</label><select name="aldea_id" id="aldea_select" disabled><option value="">Seleccione Parroquia...</option></select></div>
+
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+
+            {% if tipo_reporte == 'estudiantes' %}
+                <div class="form-group">
+                    <label>Carrera / PNF:</label>
+                    <select name="carrera_id">
+                        <option value="">Todas</option>
+                        {% for c in carreras %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+            {% else %}
+                <div class="form-group">
+                    <label>Cargo:</label>
+                    <select name="cargo_id">
+                        <option value="">Todos</option>
+                        {% for c in cargos %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label>Género:</label>
+                <select name="genero">
+                    <option value="">Cualquiera</option>
+                    <option value="FEMENINO">Femenino</option>
+                    <option value="MASCULINO">Masculino</option>
+                </select>
+            </div>
+
+            <button type="submit" name="accion" value="buscar" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">🔍 Buscar</button>
+            <button type="submit" name="accion" value="exportar" class="btn btn-success" style="width: 100%;">📥 Exportar Excel</button>
+        </form>
+    </div>
+
+    <div class="main-area">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <h2 style="margin:0;">Resultados ({{ tipo_reporte|upper }})</h2>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span style="font-size: 0.9em; color: #666;">Total: <strong>{{ resultados|length }}</strong></span>
+                <!--<button onclick="window.print()" class="btn btn-print" style="background:#6c757d; color:white; padding: 8px 15px; font-size: 0.9em;">🖨️ PDF</button>-->
+            </div>
+        </div>
+        
+        <div class="table-container">
+            {% if resultados %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Cédula</th>
+                            <th>Nombre y Apellido</th>
+                            
+                            {% if tipo_reporte == 'estudiantes' %}
+                                <th>Prog.</th>
+                                <th>Carrera</th>
+                                <th>Tramo</th>
+                                <th>Período</th>
+                            {% else %}
+                                <th>Cargo</th>
+                                <th>Tipo Personal</th>
+                            {% endif %}
+
+                            <th>Estado</th>
+                            <th>Municipio</th>
+                            <th>Aldea</th>
+                            <th>Género</th>
+                            <th>Edad</th>
+                            <th>Tlf</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in resultados %}
+                        <tr>
+                            <td>{{ r.tipo_documento }}</td>
+                            <td style="font-weight: bold;">{{ r.numero_documento }}</td>
+                            <td>{{ r.nombre_apellido }}</td>
+                            
+                            {% if tipo_reporte == 'estudiantes' %}
+                                <td>{{ r.carrera.tipo }}</td>
+                                <td>{{ r.carrera.nombre }}</td>
+                                <td>{{ r.nombre_tramo }}</td>
+                                <td>{{ r.nombre_periodo }}</td>
+                            {% else %}
+                                <td>{{ r.cargo.nombre }}</td>
+                                <td>{{ r.tipo_personal }}</td>
+                            {% endif %}
+
+                            <td>{{ r.aldea.parroquia.municipio.estado.nombre }}</td>
+                            <td>{{ r.aldea.parroquia.municipio.nombre }}</td>
+                            <td>{{ r.aldea.nombre }}</td>
+                            <td>{{ r.genero }}</td>
+                            <td>{{ r.edad }}</td>
+                            <td>{{ r.telefono or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div style="padding:50px; text-align:center; color: #888;">
+                    <h3>Sin resultados</h3>
+                    <p>No se encontraron registros de {{ tipo_reporte }}.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tu script de cascada JS (Estado->Municipio...) se mantiene igual aquí
+    function resetSelect(id, def) { let s=document.getElementById(id); s.innerHTML=`<option value="">${def}</option>`; s.disabled=true; }
+    document.getElementById('estado_select').addEventListener('change', function() {
+        let v=this.value; resetSelect('municipio_select', 'Cargando...');
+        if(v) fetch(`/api/estados/${v}/municipios`).then(r=>r.json()).then(d=>{
+            let s=document.getElementById('municipio_select'); s.innerHTML='<option value="">Todos</option>';
+            d.forEach(i=>s.innerHTML+=`<option value="${i.id}">${i.nombre}</option>`); s.disabled=false;
+        });
+    });
+    // ... Agrega el resto de los listeners de municipio y parroquia igual que tenías ...
+    document.getElementById('municipio_select').addEventListener('change', function() {
+        let v=this.value; resetSelect('parroquia_select', 'Cargando...');
+        if(v) fetch(`/api/municipios/${v}/parroquias`).then(r=>r.json()).then(d=>{
+            let s=document.getElementById('parroquia_select'); s.innerHTML='<option value="">Todas</option>';
+            d.forEach(i=>s.innerHTML+=`<option value="${i.id}">${i.nombre}</option>`); s.disabled=false;
+        });
+    });
+    document.getElementById('parroquia_select').addEventListener('change', function() {
+        let v=this.value; resetSelect('aldea_select', 'Cargando...');
+        if(v) fetch(`/api/parroquias/${v}/aldeas`).then(r=>r.json()).then(d=>{
+            let s=document.getElementById('aldea_select'); s.innerHTML='<option value="">Todas</option>';
+            d.forEach(i=>s.innerHTML+=`<option value="${i.id}">${i.nombre}</option>`); s.disabled=false;
+        });
+    });
+</script>
+{% endblock %}

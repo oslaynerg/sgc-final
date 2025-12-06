@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Editar Personal | SGC{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <div style="background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        
+        <h1 style="margin-top: 0; text-align: center; font-size: 1.6em; color: #004d99;">
+            ✏️ Editar Personal
+        </h1>
+        <p style="text-align: center; color: #666; margin-bottom: 25px;">
+            Actualizando datos de: <strong>{{ personal.nombre_apellido }}</strong>
+        </p>
+
+        <form method="POST" action="">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Identificación:</label>
+                <div style="display: flex; gap: 10px;">
+                    <select name="tipo_documento" style="width: 25%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="V" {% if personal.tipo_documento == 'V' %}selected{% endif %}>V</option>
+                        <option value="E" {% if personal.tipo_documento == 'E' %}selected{% endif %}>E</option>
+                    </select>
+                    <input type="number" name="numero_documento" value="{{ personal.numero_documento }}" required 
+                           style="width: 75%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Nombre y Apellido:</label>
+                <input type="text" name="nombre_apellido" value="{{ personal.nombre_apellido }}" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Cargo Principal:</label>
+                    <select name="cargo_id" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        {% for cargo in cargos %}
+                            <option value="{{ cargo.id }}" {% if personal.cargo_id == cargo.id %}selected{% endif %}>
+                                {{ cargo.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Tipo (Ej: FIJO):</label>
+                    <input type="text" name="tipo_personal" value="{{ personal.tipo_personal or '' }}" required 
+                           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Género:</label>
+                <select name="genero" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="FEMENINO" {% if personal.genero == 'FEMENINO' %}selected{% endif %}>FEMENINO</option>
+                    <option value="MASCULINO" {% if personal.genero == 'MASCULINO' %}selected{% endif %}>MASCULINO</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Teléfono:</label>
+                    <input type="tel" name="telefono" value="{{ personal.telefono or '' }}" 
+                           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Correo:</label>
+                    <input type="email" name="correo" value="{{ personal.correo or '' }}" 
+                           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Fecha de Nacimiento:</label>
+                <input type="date" name="fecha_nacimiento" value="{{ personal.fecha_nacimiento.isoformat() if personal.fecha_nacimiento }}" 
+                       style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1.1em;">
+                Guardar Cambios
+            </button>
+        </form>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('listar_personal', aldea_id=personal.aldea_id) }}" style="color: #666; text-decoration: none;">Cancelar</a>
+    </div>
+</div>
+{% endblock %}

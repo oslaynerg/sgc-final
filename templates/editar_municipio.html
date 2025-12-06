@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Editar Municipio | SGC{% endblock %}
+
+{% block content %}
+    <h1>Editar Municipio: {{ municipio.nombre }}</h1>
+    <form method="POST" action="">
+        <label>Nombre del Municipio:</label>
+        <input type="text" name="nombre" value="{{ municipio.nombre }}" required>
+        <button type="submit">Guardar Cambios</button>
+    </form>
+    <p><a href="{{ url_for('listar_municipios', estado_id=municipio.estado_id) }}">Cancelar</a></p>
+{% endblock %}

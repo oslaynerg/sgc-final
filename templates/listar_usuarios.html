@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios | SGC{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>🔐 Gestión de Usuarios</h1>
+        <a href="{{ url_for('agregar_usuario') }}" class="btn btn-success">
+            ➕ Nuevo Usuario
+        </a>
+    </div>
+
+    <style>
+        .badge { padding: 5px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
+        .badge-active { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .badge-inactive { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        
+        .permiso-container { font-size: 0.9em; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
+        .permiso-form { display: flex; flex-direction: column; gap: 5px; }
+        .permiso-form select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; }
+    </style>
+
+    <div style="overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px;">
+        {% if usuarios %}
+            <table style="width: 100%; border-collapse: collapse; min-width: 1000px;">
+                <thead>
+                    <tr style="background-color: #004d99; color: white; text-align: left;">
+                        <th style="padding: 12px;">Usuario</th>
+                        <th style="padding: 12px;">Email</th>
+                        <th style="padding: 12px;">Rol</th>
+                        <th style="padding: 12px;">Estado</th>
+                        <th style="padding: 12px; width: 300px;">Asignación (Coordinadores)</th>
+                        <th style="padding: 12px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in usuarios %}
+                    <tr style="border-bottom: 1px solid #eee; background-color: white;">
+                        <td style="padding: 12px; font-weight: bold;">{{ user.nombre_usuario }}</td>
+                        <td style="padding: 12px;">{{ user.email }}</td>
+                        <td style="padding: 12px;">
+                            <span style="background:#e3f2fd; color:#0d47a1; padding:4px 8px; border-radius:4px; font-size:0.9em;">
+                                {{ user.rol }}
+                            </span>
+                        </td>
+                        
+                        <td style="padding: 12px;">
+                            {% if user.activo %}
+                                <span class="badge badge-active">Activo</span>
+                            {% else %}
+                                <span class="badge badge-inactive">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding: 12px;">
+                            {% if user.rol == 'COORDINADOR' %}
+                                <div class="permiso-container">
+                                    <form method="POST" action="{{ url_for('gestionar_permisos', user_id=user.id) }}" class="permiso-form">
+                                        <select name="municipio_id">
+                                            <option value="None">-- Todo el Municipio --</option>
+                                            {% for m in municipios %}
+                                                <option value="{{ m.id }}" 
+                                                    {% if user.permisos and user.permisos[0].municipio_id == m.id %}selected{% endif %}>
+                                                    Mun. {{ m.nombre }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        
+                                        <select name="aldea_id">
+                                            <option value="None">-- Toda la Aldea --</option>
+                                            {% for a in aldeas %}
+                                                <option value="{{ a.id }}"
+                                                    {% if user.permisos and user.permisos[0].aldea_id == a.id %}selected{% endif %}>
+                                                    Aldea {{ a.nombre }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        
+                                        <button type="submit" class="btn" style="background:#6c757d; color:white; padding:4px; font-size:0.8em; margin-top:5px;">
+                                            💾 Guardar Permiso
+                                        </button>
+                                    </form>
+                                    
+                                    {% if user.permisos %}
+                                        <div style="margin-top:5px; font-size:0.8em; color:green;">
+                                            Currently: 
+                                            {% if user.permisos[0].aldea %}
+                                                Aldea {{ user.permisos[0].aldea.nombre }}
+                                            {% elif user.permisos[0].municipio %}
+                                                Mun. {{ user.permisos[0].municipio.nombre }}
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span style="color:#999; font-size:0.9em;">N/A (Acceso Global)</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding: 12px;">
+                            <div style="display:flex; gap: 5px;">
+                                <a href="{{ url_for('editar_usuario', user_id=user.id) }}" class="btn" style="background:#ffc107; color:black; padding:6px 12px; font-size:0.9em;">
+                                    ✏️
+                                </a> 
+                                
+                                {% if user.rol != 'SUPER_USUARIO' %}
+                                    <form method="POST" action="{{ url_for('cambiar_estado_usuario', user_id=user.id) }}">
+                                        <button type="submit" class="btn" 
+                                                onclick="return confirm('¿Cambiar estado de {{ user.nombre_usuario }}?')" 
+                                                style="padding:6px 12px; font-size:0.9em; background-color: {{ 'white' if user.activo else '#28a745' }}; color: {{ '#dc3545' if user.activo else 'white' }}; border: 1px solid {{ '#dc3545' if user.activo else '#28a745' }};">
+                                            {{ '🚫' if user.activo else '✅' }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 40px; text-align: center; color: #666;">
+                <p>No hay usuarios registrados.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('index') }}" style="text-decoration: none; color: #004d99; font-weight: bold;">&larr; Volver al Inicio</a>
+    </div>
+{% endblock %}

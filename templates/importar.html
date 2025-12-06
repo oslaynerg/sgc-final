@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Carga Masiva | SGC{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <h1 style="color: #004d99; text-align: center;">📤 Carga Masiva de Estudiantes</h1>
+    <p style="margin-bottom: 30px; color: #666; text-align: center;">Siga los pasos cuidadosamente para evitar errores en la importación.</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <div style="background-color: #e3f2fd; padding: 25px; border-radius: 8px; border-left: 5px solid #2196F3;">
+            <h3 style="margin-top: 0; color: #0d47a1;">1️⃣ Paso 1: Descargar Plantilla</h3>
+            <p style="font-size: 0.9em;">Obtenga el formato Excel oficial con las columnas requeridas.</p>
+            <a href="{{ url_for('descargar_plantilla_estudiantes') }}" class="btn" style="background-color: #2196F3; color: white; width: 100%; text-align: center; box-sizing: border-box;">
+                ⬇️ Descargar Excel Base
+            </a>
+        </div>
+
+        <div style="background-color: #fff; padding: 25px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <h3 style="margin-top: 0; color: #2e7d32;">2️⃣ Paso 2: Subir Archivo</h3>
+            <form method="POST" action="" enctype="multipart/form-data" style="text-align: center;">
+                <input type="file" name="archivo_excel" id="archivo_excel" accept=".xlsx" required style="font-size: 0.9em; margin-bottom: 15px; width: 100%;">
+                <button type="submit" class="btn btn-success" style="width: 100%; font-weight: bold;">
+                    🚀 Procesar Carga
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeeba;">
+        <h3 style="margin-top: 0; color: #856404;">⚠️ Guía de Datos Válidos (Copia Exacta)</h3>
+        <p style="font-size: 0.9em; color: #856404;">Para evitar errores, asegúrese de que los datos en su Excel coincidan <strong>exactamente</strong> con estos valores:</p>
+        
+        <div style="display: flex; gap: 20px; margin-top: 15px;">
+            <div style="flex: 1;">
+                <strong>📚 Tramos Activos:</strong>
+                <ul style="font-size: 0.85em; color: #333; background: white; padding: 10px 10px 10px 25px; border-radius: 4px; margin-top: 5px;">
+                    {% for t in tramos %}
+                        <li>{{ t.nombre }}</li>
+                    {% else %}
+                        <li><em>No hay tramos configurados</em></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div style="flex: 1;">
+                <strong>📅 Períodos Activos:</strong>
+                <ul style="font-size: 0.85em; color: #333; background: white; padding: 10px 10px 10px 25px; border-radius: 4px; margin-top: 5px;">
+                    {% for p in periodos %}
+                        <li>{{ p.nombre }}</li>
+                    {% else %}
+                        <li><em>No hay períodos configurados</em></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <p style="font-size: 0.8em; margin-top: 10px; color: #666;">* El Código de Aldea y el Nombre de la Carrera/PNF también deben coincidir con los registrados en el sistema.</p>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{{ url_for('index') }}" style="color: #666; text-decoration: none;">&larr; Volver al Inicio</a>
+    </div>
+</div>
+{% endblock %}

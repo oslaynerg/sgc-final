@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Editar Estudiante | SGC{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <div style="background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        
+        <h1 style="margin-top: 0; text-align: center; font-size: 1.6em; color: #004d99;">
+            ✏️ Editar Estudiante
+        </h1>
+        <p style="text-align: center; color: #666; margin-bottom: 25px;">
+            Actualizando datos de: <strong>{{ estudiante.nombre_apellido }}</strong>
+        </p>
+
+        <form method="POST" action="">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Identificación:</label>
+                <div style="display: flex; gap: 10px;">
+                    <select name="tipo_documento" style="width: 25%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="V" {% if estudiante.tipo_documento == 'V' %}selected{% endif %}>V</option>
+                        <option value="E" {% if estudiante.tipo_documento == 'E' %}selected{% endif %}>E</option>
+                    </select>
+                    <input type="number" name="numero_documento" value="{{ estudiante.numero_documento }}" required 
+                           style="width: 75%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Nombre y Apellido:</label>
+                <input type="text" name="nombre_apellido" value="{{ estudiante.nombre_apellido }}" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">PNF / Carrera:</label>
+                <select name="carrera_id" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    {% for carrera in carreras %}
+                        <option value="{{ carrera.id }}" {% if estudiante.carrera_id == carrera.id %}selected{% endif %}>
+                            {{ carrera.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Tramo:</label>
+                    <select name="tramo_id" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        {% for t in tramos %}
+                            <option value="{{ t.id }}" {% if estudiante.tramo_id == t.id %}selected{% endif %}>
+                                {{ t.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Período:</label>
+                    <select name="periodo_id" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        {% for p in periodos %}
+                            <option value="{{ p.id }}" {% if estudiante.periodo_id == p.id %}selected{% endif %}>
+                                {{ p.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Género:</label>
+                <select name="genero" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="FEMENINO" {% if estudiante.genero == 'FEMENINO' %}selected{% endif %}>FEMENINO</option>
+                    <option value="MASCULINO" {% if estudiante.genero == 'MASCULINO' %}selected{% endif %}>MASCULINO</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Teléfono:</label>
+                    <input type="tel" name="telefono" value="{{ estudiante.telefono or '' }}" 
+                           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Correo:</label>
+                    <input type="email" name="correo" value="{{ estudiante.correo or '' }}" 
+                           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Fecha de Nacimiento:</label>
+                <input type="date" name="fecha_nacimiento" value="{{ estudiante.fecha_nacimiento.isoformat() if estudiante.fecha_nacimiento }}" 
+                       style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1.1em;">
+                Guardar Cambios
+            </button>
+        </form>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('listar_estudiantes', aldea_id=estudiante.aldea_id) }}" style="color: #666; text-decoration: none;">Cancelar</a>
+    </div>
+</div>
+{% endblock %}

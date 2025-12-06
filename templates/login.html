@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar Sesión | SGC{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 40px auto; text-align: center;">
+    <h1>🔐 Iniciar Sesión</h1>
+    <p style="color: #666; margin-bottom: 30px;">Ingrese sus credenciales para acceder al sistema.</p>
+
+    <form method="POST" action="{{ url_for('login') }}" style="background: #f8f9fa; padding: 30px; border-radius: 8px; border: 1px solid #e0e0e0;">
+        <div style="margin-bottom: 20px; text-align: left;">
+            <label for="nombre_usuario" style="display: block; font-weight: bold; margin-bottom: 5px;">Usuario:</label>
+            <input type="text" id="nombre_usuario" name="nombre_usuario" required 
+                   style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 25px; text-align: left;">
+            <label for="password" style="display: block; font-weight: bold; margin-bottom: 5px;">Contraseña:</label>
+            <input type="password" id="password" name="password" required 
+                   style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Acceder</button>
+    </form>
+
+    <p style="margin-top: 20px;"><a href="{{ url_for('index') }}" style="color: #666;">&larr; Volver al Inicio</a></p>
+</div>
+{% endblock %}

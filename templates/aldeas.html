@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Aldeas de {{ parroquia.nombre }} | SGC{% endblock %}
+
+{% block content %}
+    <div style="border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px;">
+        <span style="color: #666; font-size: 0.9em;">Ubicación:</span>
+        <h1 style="margin: 0; display: inline-block; font-size: 1.5em; border: none;">
+            <span style="color: #999;">{{ parroquia.municipio.nombre }}</span> <span style="color: #ccc;">/</span>
+            <a href="{{ url_for('listar_parroquias', municipio_id=parroquia.municipio.id) }}" style="text-decoration: none; color: #666;">{{ parroquia.nombre }}</a> 
+            <span style="color: #ccc;">/</span> Aldeas
+        </h1>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+        <a href="{{ url_for('agregar_aldea', parroquia_id=parroquia.id) }}" class="btn btn-success">
+            ➕ Nueva Aldea
+        </a>
+    </div>
+
+    <div style="overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px;">
+        {% if aldeas %}
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">
+                <thead>
+                    <tr style="background-color: #004d99; color: white; text-align: left;">
+                        <th style="padding: 12px; width: 100px;">Código</th>
+                        <th style="padding: 12px;">Nombre de la Aldea</th>
+                        <th style="padding: 12px; width: 350px;">Gestión Operativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for aldea in aldeas %}
+                    <tr style="border-bottom: 1px solid #eee; background-color: white;">
+                        <td style="padding: 12px; font-family: monospace; font-size: 1.1em; color: #555;">{{ aldea.codigo }}</td>
+                        <td style="padding: 12px; font-weight: bold;">{{ aldea.nombre }}</td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <a href="{{ url_for('listar_estudiantes', aldea_id=aldea.id) }}" class="btn" style="background-color: #28a745; color: white; padding: 6px 12px; font-size: 0.9em;">
+                                    🎓 Estudiantes
+                                </a>
+                                <a href="{{ url_for('listar_personal', aldea_id=aldea.id) }}" class="btn" style="background-color: #007bff; color: white; padding: 6px 12px; font-size: 0.9em;">
+                                    👔 Personal
+                                </a>
+                                
+                                {% if session.get('user_rol') == 'SUPER_USUARIO' %}
+                                    <div style="border-left: 1px solid #ccc; padding-left: 10px; display: flex; gap: 5px;">
+                                        <a href="{{ url_for('editar_aldea', aldea_id=aldea.id) }}" class="btn" style="background:#ffc107; color:black; padding: 6px;">✏️</a>
+                                        <form method="POST" action="{{ url_for('eliminar_aldea', aldea_id=aldea.id) }}">
+                                            <button type="submit" class="btn btn-danger" style="padding: 6px;" onclick="return confirm('¿Eliminar {{ aldea.nombre }}?')">🗑️</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 30px; text-align: center; color: #666; background: #f8f9fa;">
+                <p>No hay aldeas registradas en esta parroquia.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('listar_parroquias', municipio_id=parroquia.municipio.id) }}" style="text-decoration: none; color: #004d99;">&larr; Volver a Parroquias</a>
+    </div>
+{% endblock %}

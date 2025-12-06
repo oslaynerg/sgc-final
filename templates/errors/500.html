@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}500 - Error Interno{% endblock %}
+
+{% block content %}
+    <div style="text-align: center; padding: 50px;">
+        <h1 style="color: #C70039; font-size: 4em;">500</h1>
+        <h2>Error Interno del Servidor</h2>
+        <p>Ha ocurrido un error inesperado en el servidor. El equipo técnico ha sido notificado.</p>
+        <p>Intente nuevamente en unos minutos, o contacte al administrador si el problema persiste.</p>
+        <p><a href="{{ url_for('index') }}">Volver a la página de inicio</a></p>
+    </div>
+{% endblock %}

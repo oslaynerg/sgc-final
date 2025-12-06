@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Municipios de {{ estado.nombre }} | SGC{% endblock %}
+
+{% block content %}
+    <div style="border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px;">
+        <span style="color: #666; font-size: 0.9em;">Ubicación:</span>
+        <h1 style="margin: 0; display: inline-block; font-size: 1.5em; border: none;">
+            <a href="{{ url_for('listar_estados') }}" style="text-decoration: none; color: #666;">{{ estado.nombre }}</a> 
+            <span style="color: #ccc;">/</span> Municipios
+        </h1>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+        <a href="{{ url_for('agregar_municipio', estado_id=estado.id) }}" class="btn btn-success">
+            ➕ Nuevo Municipio
+        </a>
+    </div>
+
+    <div style="overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px;">
+        {% if municipios %}
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">
+                <thead>
+                    <tr style="background-color: #004d99; color: white; text-align: left;">
+                        <th style="padding: 12px; width: 80px;">ID</th>
+                        <th style="padding: 12px;">Nombre del Municipio</th>
+                        <th style="padding: 12px; width: 300px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for municipio in municipios %}
+                    <tr style="border-bottom: 1px solid #eee; background-color: white;">
+                        <td style="padding: 12px; color: #666;">{{ municipio.id }}</td>
+                        <td style="padding: 12px; font-weight: bold;">{{ municipio.nombre }}</td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{{ url_for('listar_parroquias', municipio_id=municipio.id) }}" class="btn" style="background-color: #17a2b8; color: white; padding: 6px 12px; font-size: 0.9em;">
+                                    📂 Ver Parroquias
+                                </a>
+
+                                {% if session.get('user_rol') == 'SUPER_USUARIO' %}
+                                    <a href="{{ url_for('editar_municipio', municipio_id=municipio.id) }}" class="btn" style="background:#ffc107; color:black; padding: 6px 10px;">✏️</a>
+                                    
+                                    <form method="POST" action="{{ url_for('eliminar_municipio', municipio_id=municipio.id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger" style="padding: 6px 10px;" onclick="return confirm('¿Eliminar {{ municipio.nombre }}?')">🗑️</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 30px; text-align: center; color: #666; background: #f8f9fa;">
+                <p>No hay municipios registrados en este estado.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('listar_estados') }}" style="text-decoration: none; color: #004d99;">&larr; Volver a Estados</a>
+    </div>
+{% endblock %}
