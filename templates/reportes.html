@@ -10,21 +10,48 @@
         flex: 0 0 280px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; height: fit-content; 
     }
     .main-area { flex: 1; min-width: 0; }
+    
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 4px; color: #555; }
     .form-group select, .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
     
-    .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .data-table { width: 100%; border-collapse: collapse; min-width: 1400px; font-size: 0.85em; }
-    .data-table thead tr { background-color: #004d99; color: white; text-align: left; }
+    /* ESTILO IDÉNTICO A ESTUDIANTES.HTML */
+    .table-container { 
+        overflow-x: auto; 
+        background: white; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+    }
+    .data-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        min-width: 1300px; /* Asegura scroll en pantalla pequeña */
+        font-size: 0.85em; 
+    }
+    .data-table thead tr { 
+        background-color: #004d99; 
+        color: white; 
+        text-align: left; 
+    }
     .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
     .data-table tbody tr:nth-of-type(even) { background-color: #f8f9fa; }
 
+    /* ESTILOS DE IMPRESIÓN (PDF HORIZONTAL) */
     @media print {
+        @page { size: landscape; margin: 1cm; } /* OBLIGA A LA HOJA A SER HORIZONTAL */
+        
         .sidebar-filtros, .navbar, footer, .btn-print { display: none !important; }
         .reporte-wrapper { display: block; }
-        .data-table { border: 1px solid #000; font-size: 10px; }
-        .data-table th { background-color: #ddd !important; color: black !important; }
+        .main-area { width: 100%; margin: 0; padding: 0; }
+        .table-container { box-shadow: none; }
+        .data-table { 
+            width: 100%; 
+            min-width: 0; /* Quita el ancho forzado para que ajuste al papel */
+            border: 1px solid #000; 
+            font-size: 10px; /* Letra más pequeña para que quepa */
+        }
+        .data-table th { background-color: #ddd !important; color: black !important; border: 1px solid #000; }
+        .data-table td { border: 1px solid #000; }
     }
 </style>
 
@@ -63,21 +90,9 @@
             <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
 
             {% if tipo_reporte == 'estudiantes' %}
-                <div class="form-group">
-                    <label>Carrera / PNF:</label>
-                    <select name="carrera_id">
-                        <option value="">Todas</option>
-                        {% for c in carreras %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
-                    </select>
-                </div>
+                <div class="form-group"><label>Carrera / PNF:</label><select name="carrera_id"><option value="">Todas</option>{% for c in carreras %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}</select></div>
             {% else %}
-                <div class="form-group">
-                    <label>Cargo:</label>
-                    <select name="cargo_id">
-                        <option value="">Todos</option>
-                        {% for c in cargos %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
-                    </select>
-                </div>
+                <div class="form-group"><label>Cargo:</label><select name="cargo_id"><option value="">Todos</option>{% for c in cargos %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}</select></div>
             {% endif %}
 
             <div class="form-group">
@@ -96,10 +111,10 @@
 
     <div class="main-area">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <h2 style="margin:0;">Resultados ({{ tipo_reporte|upper }})</h2>
+            <h2 style="margin:0;">Resultados: {{ tipo_reporte|upper }}</h2>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <span style="font-size: 0.9em; color: #666;">Total: <strong>{{ resultados|length }}</strong></span>
-                <!--<button onclick="window.print()" class="btn btn-print" style="background:#6c757d; color:white; padding: 8px 15px; font-size: 0.9em;">🖨️ PDF</button>-->
+                <button onclick="window.print()" class="btn btn-print" style="background:#6c757d; color:white; padding: 8px 15px; font-size: 0.9em;">🖨️ PDF</button>
             </div>
         </div>
         
@@ -116,7 +131,7 @@
                                 <th>Prog.</th>
                                 <th>Carrera</th>
                                 <th>Tramo</th>
-                                <th>Período</th>
+                                <th>Periodo</th>
                             {% else %}
                                 <th>Cargo</th>
                                 <th>Tipo Personal</th>
@@ -133,17 +148,17 @@
                     <tbody>
                         {% for r in resultados %}
                         <tr>
-                            <td>{{ r.tipo_documento }}</td>
+                            <td style="text-align:center;"><span style="background:#e3f2fd; color:#0d47a1; padding:2px 6px; border-radius:4px; font-weight:bold;">{{ r.tipo_documento }}</span></td>
                             <td style="font-weight: bold;">{{ r.numero_documento }}</td>
                             <td>{{ r.nombre_apellido }}</td>
                             
                             {% if tipo_reporte == 'estudiantes' %}
                                 <td>{{ r.carrera.tipo }}</td>
-                                <td>{{ r.carrera.nombre }}</td>
+                                <td style="color:#004d99; font-weight:500;">{{ r.carrera.nombre }}</td>
                                 <td>{{ r.nombre_tramo }}</td>
                                 <td>{{ r.nombre_periodo }}</td>
                             {% else %}
-                                <td>{{ r.cargo.nombre }}</td>
+                                <td style="color:#004d99; font-weight:500;">{{ r.cargo.nombre }}</td>
                                 <td>{{ r.tipo_personal }}</td>
                             {% endif %}
 
@@ -160,7 +175,7 @@
             {% else %}
                 <div style="padding:50px; text-align:center; color: #888;">
                     <h3>Sin resultados</h3>
-                    <p>No se encontraron registros de {{ tipo_reporte }}.</p>
+                    <p>No se encontraron registros. Intente cambiar los filtros.</p>
                 </div>
             {% endif %}
         </div>
@@ -168,7 +183,7 @@
 </div>
 
 <script>
-    // Tu script de cascada JS (Estado->Municipio...) se mantiene igual aquí
+    // Scripts de Cascada (No cambian)
     function resetSelect(id, def) { let s=document.getElementById(id); s.innerHTML=`<option value="">${def}</option>`; s.disabled=true; }
     document.getElementById('estado_select').addEventListener('change', function() {
         let v=this.value; resetSelect('municipio_select', 'Cargando...');
@@ -177,7 +192,6 @@
             d.forEach(i=>s.innerHTML+=`<option value="${i.id}">${i.nombre}</option>`); s.disabled=false;
         });
     });
-    // ... Agrega el resto de los listeners de municipio y parroquia igual que tenías ...
     document.getElementById('municipio_select').addEventListener('change', function() {
         let v=this.value; resetSelect('parroquia_select', 'Cargando...');
         if(v) fetch(`/api/municipios/${v}/parroquias`).then(r=>r.json()).then(d=>{

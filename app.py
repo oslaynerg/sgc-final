@@ -960,13 +960,14 @@ def importar_estudiantes():
 @app.route('/reportes', methods=['GET', 'POST'])
 @login_required
 def reportes():
-    # Cargar listas para los filtros
+    # Cargar listas para filtros
     estados = Estado.query.order_by(Estado._nombre).all()
     carreras = Carrera.query.order_by(Carrera._nombre).all()
     cargos = Cargo.query.order_by(Cargo._nombre).all()
     
+    # Variable única para los resultados
     resultados = []
-    tipo_reporte = 'estudiantes' # Valor por defecto
+    tipo_reporte = 'estudiantes' 
     
     if request.method == 'POST':
         tipo_reporte = request.form.get('tipo_reporte')
@@ -984,41 +985,46 @@ def reportes():
         
         query = None
 
-        # --- LÓGICA DE BÚSQUEDA CORREGIDA ---
+        # 1. Construir Query Base
         if tipo_reporte == 'estudiantes':
             query = Estudiante.query.join(AldeaUniversitaria).join(Parroquia).join(Municipio)
             if carrera_id: query = query.filter(Estudiante.carrera_id == carrera_id)
             if genero: query = query.filter(Estudiante._genero == genero)
             if tipo_documento: query = query.filter(Estudiante.tipo_documento == tipo_documento)
             
-        elif tipo_reporte == 'personal': # <--- ESTO FALTABA
+        elif tipo_reporte == 'personal':
             query = Personal.query.join(AldeaUniversitaria).join(Parroquia).join(Municipio)
             if cargo_id: query = query.filter(Personal.cargo_id == cargo_id)
             if genero: query = query.filter(Personal._genero == genero)
             if tipo_documento: query = query.filter(Personal.tipo_documento == tipo_documento)
 
-        # Aplicar filtros geográficos (Común para ambos)
+        # 2. Aplicar Filtros Geográficos
         if query:
             if estado_id: query = query.filter(Municipio.estado_id == estado_id)
             if municipio_id: query = query.filter(Parroquia.municipio_id == municipio_id)
             if parroquia_id: query = query.filter(AldeaUniversitaria.parroquia_id == parroquia_id)
-            if aldea_id:
-                if tipo_reporte == 'estudiantes': query = query.filter(Estudiante.aldea_id == aldea_id)
-                else: query = query.filter(Personal.aldea_id == aldea_id)
-            res = query.all()
             
-        # --- LÓGICA DE EXCEL CORREGIDA ---
+            if aldea_id:
+                if tipo_reporte == 'estudiantes':
+                    query = query.filter(Estudiante.aldea_id == aldea_id)
+                else:
+                    query = query.filter(Personal.aldea_id == aldea_id)
+            
+            # ¡AQUÍ ESTABA EL ERROR! Usamos 'resultados' en lugar de 'res'
+            resultados = query.all()
+
+        # 3. Exportar Excel
         if accion == 'exportar':
             si = io.StringIO()
             cw = csv.writer(si)
             
             if tipo_reporte == 'estudiantes':
                 cw.writerow(['Tipo', 'Cédula', 'Nombre', 'Programa', 'Carrera', 'Tramo', 'Periodo', 'Genero', 'Edad', 'Telefono', 'Correo', 'Estado', 'Municipio', 'Parroquia', 'Aldea'])
-                for r in res:
+                for r in resultados:
                     cw.writerow([r.tipo_documento, r.numero_documento, r.nombre_apellido, r.carrera.tipo, r.carrera.nombre, r.nombre_tramo, r.nombre_periodo, r.genero, r.edad, r.telefono, r.correo, r.aldea.parroquia.municipio.estado.nombre, r.aldea.parroquia.municipio.nombre, r.aldea.parroquia.nombre, r.aldea.nombre])
-            else: # <--- AHORA SÍ TIENE EL ELSE PARA PERSONAL
+            else:
                 cw.writerow(['Tipo', 'Cédula', 'Nombre', 'Cargo', 'Tipo Personal', 'Genero', 'Edad', 'Telefono', 'Correo', 'Estado', 'Municipio', 'Parroquia', 'Aldea'])
-                for r in res:
+                for r in resultados:
                     cw.writerow([r.tipo_documento, r.numero_documento, r.nombre_apellido, r.cargo.nombre, r.tipo_personal, r.genero, r.edad, r.telefono, r.correo, r.aldea.parroquia.municipio.estado.nombre, r.aldea.parroquia.municipio.nombre, r.aldea.parroquia.nombre, r.aldea.nombre])
             
             output = make_response(si.getvalue())
@@ -1030,7 +1036,7 @@ def reportes():
                            estados=estados, 
                            carreras=carreras, 
                            cargos=cargos, 
-                           resultados=resultados, 
+                           resultados=resultados, # Ahora sí lleva datos
                            tipo_reporte=tipo_reporte)
 
 # ===================================================
