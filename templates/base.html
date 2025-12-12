@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SGC Misión Sucre{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}?v=2">
+
     <style>
         :root {
-            --primary-color: #99000d;
-            --secondary-color: #660000;
-            /* --primary-color: #004d99;
-            --secondary-color: #003366; */
-            --accent-color: #ffc107;
+            --primary-color: #004d99;   /* Azul Misión Sucre */
+            --secondary-color: #003366;
+            --accent-color: #ffc107;    /* Amarillo */
             --success-color: #28a745;
             --danger-color: #dc3545;
             --light-bg: #f4f6f8;
@@ -32,48 +32,92 @@
             min-height: 100vh;
         }
 
-        /* NAVBAR */
+        /* 1. CINTILLO INSTITUCIONAL (NUEVO) */
+        .header-institucional {
+            background-color: var(--white);
+            padding: 10px 30px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-logos img {
+            height: 50px; /* Altura controlada */
+            width: auto;
+            margin-right: 15px;
+        }
+        .header-titulo {
+            font-size: 0.9em;
+            color: #666;
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        /* 2. NAVBAR MODIFICADO */
         .navbar { 
-            background-color: var(--primary-color); 
-            padding: 15px 30px; 
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            padding: 10px 30px; 
             color: white; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .navbar-brand { font-size: 1.4em; font-weight: 700; color: white; text-decoration: none; }
+        
+        .navbar-brand { 
+            font-size: 1.3em; 
+            font-weight: 700; 
+            color: white; 
+            text-decoration: none; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Logo pequeño en el menú */
+        .navbar-logo-icon {
+            height: 30px;
+            width: auto;
+            filter: brightness(0) invert(1); /* Vuelve el logo blanco si es oscuro */
+        }
+
         .nav-links a { 
             color: rgba(255,255,255,0.9); 
             text-decoration: none; 
             margin-left: 20px; 
             font-weight: 500; 
-            transition: color 0.3s;
+            transition: all 0.3s;
+            font-size: 0.95em;
         }
-        .nav-links a:hover { color: var(--accent-color); }
+        .nav-links a:hover { color: var(--accent-color); transform: translateY(-1px); }
+        
         .btn-logout { 
-            background: rgba(255,255,255,0.1); 
-            padding: 5px 12px; 
-            border-radius: 4px; 
+            background: rgba(255,255,255,0.15); 
+            padding: 6px 15px; 
+            border-radius: 20px; 
+            border: 1px solid rgba(255,255,255,0.2);
         }
+        .btn-logout:hover { background: rgba(255,255,255,0.25); }
 
-        /* CONTENIDO PRINCIPAL */
+        /* CONTENIDO */
         .content { 
             flex: 1; 
             padding: 30px; 
             max-width: 1200px; 
             width: 95%;
-            margin: 30px auto; 
+            margin: 20px auto; 
             background-color: var(--white); 
             border-radius: 8px; 
             box-shadow: var(--shadow); 
         }
 
         /* ESTILOS GLOBALES */
-        h1 { color: var(--primary-color); margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h1 { color: var(--primary-color); margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.8em; }
         h2, h3 { color: var(--secondary-color); }
         
-        /* BOTONES */
         .btn {
             display: inline-block;
             padding: 10px 20px;
@@ -89,13 +133,11 @@
         .btn-success { background-color: var(--success-color); color: white; }
         .btn-danger { background-color: var(--danger-color); color: white; }
         
-        /* TABLAS */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95em; }
         th { background-color: var(--primary-color); color: white; padding: 12px; text-align: left; }
         td { border-bottom: 1px solid #eee; padding: 12px; }
         tr:hover { background-color: #f9f9f9; }
 
-        /* MENSAJES FLASH */
         .flash { padding: 15px; margin-bottom: 20px; border-radius: var(--border-radius); border-left: 5px solid; }
         .flash.success { background-color: #e8f5e9; color: #1b5e20; border-color: var(--success-color); }
         .flash.danger { background-color: #fce8e6; color: #b71c1c; border-color: var(--danger-color); }
@@ -104,39 +146,48 @@
         /* FOOTER */
         footer {
             text-align: center;
-            padding: 15px;
+            padding: 20px;
             background-color: #e9ecef;
             color: #666;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            border-top: 1px solid #ddd;
             margin-top: auto;
         }
     </style>
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png') }}?v=2">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon/favicon-32x32.png') }}?v=2">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon/favicon-16x16.png') }}?v=2">
-    <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest') }}?v=2">
-    <link rel="mask-icon" href="{{ url_for('static', filename='favicon/safari-pinned-tab.svg') }}?v=2" color="#004d99">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}?v=2">
-    <meta name="msapplication-TileColor" content="#004d99">
-    <meta name="msapplication-config" content="{{ url_for('static', filename='favicon/browserconfig.xml') }}">
-    <meta name="theme-color" content="#ffffff">
 </head>
 <body>
 
+    <header class="header-institucional">
+        <div class="header-logos">
+            <img src="{{ url_for('static', filename='img/logo_institucion.png') }}" alt="Logo Misión Sucre" onerror="this.style.display='none'">
+        </div>
+        <div class="header-titulo">
+            <strong>República Bolivariana de Venezuela</strong><br>
+            Fundación Misión Sucre<br>
+            Coordinación Estatal
+        </div>
+    </header>
+
     <nav class="navbar">
-        <a href="{{ url_for('index') }}" class="navbar-brand">🎓 SGC Misión Sucre</a>
+        <a href="{{ url_for('index') }}" class="navbar-brand">
+            <img src="{{ url_for('static', filename='favicon/favicon-32x32.png') }}" class="navbar-logo-icon" alt="Icono">
+            SGC
+        </a>
+        
         <div class="nav-links">
-            <a href="{{ url_for('index') }}">Inicio</a>
+            <a href="{{ url_for('index') }}">🏠 Inicio</a>
 
             {% if session.get('user_id') %}
                 <a href="{{ url_for('listar_estados') }}">🗺️ Gestión Geográfica</a>
+                
                 {% if session.get('user_rol') == 'SUPER_USUARIO' %}
                     <a href="{{ url_for('gestion_academica') }}">⚙️ Académico</a>
                 {% endif %}
+                
                 <a href="{{ url_for('reportes') }}">📊 Reportes</a>
-                <a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión ({{ session['user_rol'] }})</a>
+                <a href="{{ url_for('logout') }}" class="btn-logout">Salir ({{ session['user_rol'] }})</a>
             {% else %}
-                <a href="{{ url_for('login') }}">Iniciar Sesión</a>
+                <a href="{{ url_for('login') }}">🔐 Iniciar Sesión</a>
             {% endif %}
         </div>
     </nav>
@@ -154,7 +205,8 @@
     </div>
 
     <footer>
-        &copy; 2025 Sistema de Gestión Centralizada - Misión Sucre
+        <p><strong>Sistema de Gestión Centralizada (SGC)</strong> - Misión Sucre</p>
+        <p>&copy; 2025. Desarrollado para la Coordinación Estatal.</p>
     </footer>
 
 </body>
