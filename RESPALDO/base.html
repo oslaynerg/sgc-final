@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SGC Misión Sucre{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}?v=2">
 
@@ -34,7 +32,7 @@
             min-height: 100vh;
         }
 
-        /* 1. CINTILLO INSTITUCIONAL ACTUALIZADO */
+        /* 1. CINTILLO INSTITUCIONAL (NUEVO) */
         .header-institucional {
             background-color: var(--white);
             padding: 10px 30px;
@@ -42,13 +40,17 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
         }
-
-        .header-institucional img {
-            max-height: 55px;
+        .header-logos img {
+            height: 50px; /* Altura controlada */
             width: auto;
-            object-fit: contain;
+            margin-right: 15px;
+        }
+        .header-titulo {
+            font-size: 0.9em;
+            color: #666;
+            text-align: right;
+            line-height: 1.2;
         }
 
         /* 2. NAVBAR MODIFICADO */
@@ -75,13 +77,11 @@
             gap: 10px;
         }
         
-        /* LOGO EN LA BARRA DE NAVEGACIÓN */
+        /* Logo pequeño en el menú */
         .navbar-logo-icon {
-            height: 40px;
+            height: 30px;
             width: auto;
-            background-color: white;
-            border-radius: 50%;
-            padding: 2px;
+            filter: brightness(0) invert(1); /* Vuelve el logo blanco si es oscuro */
         }
 
         .nav-links a { 
@@ -153,29 +153,24 @@
             border-top: 1px solid #ddd;
             margin-top: auto;
         }
-
-        /* MEDIA QUERIES PARA MÓVILES */
-        @media (max-width: 768px) {
-            .header-institucional {
-                justify-content: center;
-                gap: 15px;
-            }
-            .nav-links {
-                display: none; /* Aquí podrías implementar un menú hamburguesa más adelante */
-            }
-        }
     </style>
 </head>
 <body>
 
     <header class="header-institucional">
-        <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/header_left.gif" alt="Gobierno Bolivariano de Venezuela">
-        <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/200.gif" alt="200 Años">
+        <div class="header-logos">
+            <img src="{{ url_for('static', filename='img/membrete.jpg') }}" alt="Logo Misión Sucre" onerror="this.style.display='none'">
+        </div>
+        <div class="header-titulo">
+            <strong>República Bolivariana de Venezuela</strong><br>
+            Fundación Misión Sucre<br>
+            Coordinación Estatal
+        </div>
     </header>
 
     <nav class="navbar">
         <a href="{{ url_for('index') }}" class="navbar-brand">
-            <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/logo.gif" class="navbar-logo-icon" alt="Logo Misión Sucre">
+            <img src="{{ url_for('static', filename='favicon/favicon-32x32.png') }}" class="navbar-logo-icon" alt="Icono">
             SGC
         </a>
         
