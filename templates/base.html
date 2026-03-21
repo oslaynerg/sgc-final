@@ -169,13 +169,13 @@
 <body>
 
     <header class="header-institucional">
-        <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/header_left.gif" alt="Gobierno Bolivariano de Venezuela">
-        <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/200.gif" alt="200 Años">
+        <img src="{{ url_for('static', filename='img/header_left.gif') }}" alt="Gobierno Bolivariano de Venezuela">
+       <img src="{{ url_for('static', filename='img/200.gif') }}" alt="200 Años">
     </header>
 
     <nav class="navbar">
         <a href="{{ url_for('index') }}" class="navbar-brand">
-            <img src="http://www.misionsucre.gob.ve/msweb/wp-content/themes/construction-light-child/assets/images/logo.gif" class="navbar-logo-icon" alt="Logo Misión Sucre">
+            <img src="{{ url_for('static', filename='img/logo.gif') }}" class="navbar-logo-icon" alt="Logo Misión Sucre">
             SGC
         </a>
         
