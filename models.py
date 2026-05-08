@@ -188,7 +188,13 @@ class Estudiante(db.Model):
     cargado_por = db.Column(db.String(50), default='USUARIO')
     
     @property
-    def cedula(self): return f"{self.tipo_documento}-{self.numero_documento}"
+    def cedula(self): 
+        return f"{self.tipo_documento}-{self.numero_documento}"
+    
+    @cedula.setter
+    def cedula(self, value):
+        # Esto permite que est.cedula = '12345' funcione, guardándolo en numero_documento
+        self.numero_documento = value
 
     @property
     def nombre_apellido(self): return self._nombre_apellido
@@ -196,9 +202,13 @@ class Estudiante(db.Model):
     def nombre_apellido(self, value): self._nombre_apellido = value.upper() if value else None
 
     @property
-    def genero(self): return self._genero
+    def genero(self): 
+        return self._genero
+    
     @genero.setter
-    def genero(self, value): self._genero = value.upper() if value else None
+    def genero(self, value):
+        # Se asegura de que se guarde en mayúsculas
+        self._genero = value.upper() if value else None
 
     @property
     def edad(self):

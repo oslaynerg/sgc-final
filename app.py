@@ -736,29 +736,31 @@ def editar_estudiante(estudiante_id):
     
     if request.method == 'POST':
         try:
-            # CORRECCIÓN: Los nombres deben coincidir con name="..." del HTML
+            # 1. Identificación (Usamos los nombres que pusiste en el 'name' del HTML)
             est.tipo_documento = request.form.get('tipo_documento')
-            est.cedula = request.form.get('cedula') # Antes tenías 'numero_documento'
+            est.cedula = request.form.get('cedula')  # El setter que agregamos arriba lo guardará en numero_documento
+            
+            # 2. Datos Personales
             est.nombre_apellido = request.form.get('nombre_apellido')
-            est.sexo = request.form.get('sexo')
+            est.genero = request.form.get('sexo')    # En el HTML se llama 'sexo', en el modelo 'genero'
             est.telefono = request.form.get('telefono')
             est.correo = request.form.get('correo')
-            
-            # Relaciones académicas
-            est.carrera_id = request.form.get('carrera_id')
-            est.tramo_id = request.form.get('tramo_id')
-            est.periodo_id = request.form.get('periodo_id')
 
-            # Manejo de la fecha (Conversión de string a objeto date)
+            # 3. Fecha de Nacimiento (Conversión necesaria)
             fecha_nac = request.form.get('fecha_nacimiento')
             if fecha_nac:
                 from datetime import datetime
                 est.fecha_nacimiento = datetime.strptime(fecha_nac, '%Y-%m-%d').date()
 
+            # 4. Relaciones Académicas
+            est.carrera_id = request.form.get('carrera_id')
+            est.tramo_id = request.form.get('tramo_id')
+            est.periodo_id = request.form.get('periodo_id')
+
             db.session.commit()
-            flash("Estudiante actualizado correctamente", "success")
+            flash("Estudiante actualizado con éxito", "success")
             return redirect(url_for('listar_estudiantes', aldea_id=est.aldea_id))
-            
+
         except Exception as e:
             db.session.rollback()
             flash(f"Error al actualizar: {str(e)}", "danger")
