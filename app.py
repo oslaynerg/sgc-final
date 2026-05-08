@@ -729,6 +729,7 @@ def agregar_estudiante(aldea_id):
 @app.route('/estudiantes/<int:estudiante_id>/editar', methods=['GET', 'POST'])
 @roles_required(['SUPER_USUARIO', 'ANALISTA', 'COORDINADOR'])
 def editar_estudiante(estudiante_id):
+    # 1. Obtener los datos actuales y las listas para los select
     est = db.session.get(Estudiante, estudiante_id)
     tramos = Tramo.query.all()
     periodos = PeriodoAcademico.query.all()
@@ -736,30 +737,41 @@ def editar_estudiante(estudiante_id):
     
     if request.method == 'POST':
         try:
-            # 1. Identificación
-            est.tipo_documento = request.form.get('tipo_documento')
+            # --- VALIDACIÓN DE DUPLICADOS ---
+            # Obtenemos la cédula del formulario (probando ambos nombres posibles)
+            nueva_cedula = request.form.get('numero_documento') or request.form.get('cedula')
             
-            # 🔥 CORRECCIÓN: Buscamos ambos posibles nombres del HTML
-            cedula_form = request.form.get('numero_documento') or request.form.get('cedula')
-            if cedula_form:
-                est.cedula = cedula_form
-            else:
+            if not nueva_cedula:
                 flash("El número de documento es obligatorio.", "danger")
                 return redirect(request.url)
+
+            # Buscamos si existe OTRO estudiante con esa misma cédula
+            estudiante_duplicado = Estudiante.query.filter(
+                Estudiante.numero_documento == nueva_cedula, 
+                Estudiante.id != estudiante_id
+            ).first()
+
+            if estudiante_duplicado:
+                flash(f"Error: La cédula {nueva_cedula} ya pertenece a {estudiante_duplicado.nombre_apellido}.", "danger")
+                return redirect(request.url)
+
+            # --- ACTUALIZACIÓN DE DATOS ---
+            # 1. Identificación
+            est.tipo_documento = request.form.get('tipo_documento')
+            est.cedula = nueva_cedula  # Esto activa el @cedula.setter de tu models.py
             
             # 2. Datos Personales
             est.nombre_apellido = request.form.get('nombre_apellido')
-            
-            # 🔥 CORRECCIÓN: Buscamos ambos posibles nombres para el género/sexo
+            # Buscamos género o sexo para mayor compatibilidad con el HTML
             est.genero = request.form.get('genero') or request.form.get('sexo')
-            
             est.telefono = request.form.get('telefono')
             est.correo = request.form.get('correo')
 
-            # 3. Fecha de Nacimiento
+            # 3. Manejo de Fecha de Nacimiento
             fecha_nac = request.form.get('fecha_nacimiento')
             if fecha_nac:
                 from datetime import datetime
+                # Convertimos el texto del HTML (YYYY-MM-DD) a objeto Date de Python
                 est.fecha_nacimiento = datetime.strptime(fecha_nac, '%Y-%m-%d').date()
 
             # 4. Relaciones Académicas
@@ -767,13 +779,14 @@ def editar_estudiante(estudiante_id):
             est.tramo_id = request.form.get('tramo_id')
             est.periodo_id = request.form.get('periodo_id')
 
+            # --- GUARDAR EN BASE DE DATOS ---
             db.session.commit()
-            flash("Estudiante actualizado con éxito", "success")
+            flash("Estudiante actualizado con éxito.", "success")
             return redirect(url_for('listar_estudiantes', aldea_id=est.aldea_id))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Error al actualizar: {str(e)}", "danger")
+            flash(f"Error crítico al actualizar: {str(e)}", "danger")
             
     return render_template('editar_estudiante.html', 
                            estudiante=est, 
