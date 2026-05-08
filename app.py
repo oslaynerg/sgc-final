@@ -736,17 +736,27 @@ def editar_estudiante(estudiante_id):
     
     if request.method == 'POST':
         try:
-            # 1. Identificación (Usamos los nombres que pusiste en el 'name' del HTML)
+            # 1. Identificación
             est.tipo_documento = request.form.get('tipo_documento')
-            est.cedula = request.form.get('cedula')  # El setter que agregamos arriba lo guardará en numero_documento
+            
+            # 🔥 CORRECCIÓN: Buscamos ambos posibles nombres del HTML
+            cedula_form = request.form.get('numero_documento') or request.form.get('cedula')
+            if cedula_form:
+                est.cedula = cedula_form
+            else:
+                flash("El número de documento es obligatorio.", "danger")
+                return redirect(request.url)
             
             # 2. Datos Personales
             est.nombre_apellido = request.form.get('nombre_apellido')
-            est.genero = request.form.get('sexo')    # En el HTML se llama 'sexo', en el modelo 'genero'
+            
+            # 🔥 CORRECCIÓN: Buscamos ambos posibles nombres para el género/sexo
+            est.genero = request.form.get('genero') or request.form.get('sexo')
+            
             est.telefono = request.form.get('telefono')
             est.correo = request.form.get('correo')
 
-            # 3. Fecha de Nacimiento (Conversión necesaria)
+            # 3. Fecha de Nacimiento
             fecha_nac = request.form.get('fecha_nacimiento')
             if fecha_nac:
                 from datetime import datetime
