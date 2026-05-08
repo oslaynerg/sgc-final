@@ -858,104 +858,83 @@ import pandas as pd
 @app.route('/importar/estudiantes', methods=['GET', 'POST'])
 @roles_required(['SUPER_USUARIO'])
 def importar_estudiantes():
-    # 1. Cargar datos para mostrar la "Guía de Datos" en el HTML
+    # 1. Cargar datos para la Guía de Datos del HTML
     tramos_activos = Tramo.query.order_by(Tramo.nombre).all()
     periodos_activos = PeriodoAcademico.query.order_by(PeriodoAcademico.nombre.desc()).all()
+    aldeas_activas = AldeaUniversitaria.query.order_by(AldeaUniversitaria._nombre).all()
 
     if request.method == 'POST':
         file = request.files.get('archivo_excel')
         
-        # Validar si subieron archivo y extensión
-        if not file or file.filename == '':
-            flash('⚠️ No se seleccionó ningún archivo.', 'danger')
-            return redirect(request.url)
-            
-        if not file.filename.endswith(('.xlsx', '.xls')):
-            flash('⚠️ Archivo inválido. Debe ser un formato de Excel (.xlsx o .xls)', 'danger')
+        if not file or not file.filename.endswith(('.xlsx', '.xls')):
+            flash('⚠️ Archivo inválido. Debe subir un archivo Excel (.xlsx)', 'danger')
             return redirect(request.url)
             
         try:
-            # TRUCO PRO: Leer todo como texto (str) evita que las cédulas se vuelvan decimales (ej: 12345.0)
-            df = pd.read_excel(file, dtype=str)
-            
-            # Reemplazar valores nulos (NaN) de Pandas por cadenas vacías para evitar errores de código
-            df = df.fillna('')
-            
-            # Limpiar cabeceras (quitar espacios y poner mayúsculas)
+            # Leer como string para evitar que las cédulas se vuelvan decimales (123.0)
+            df = pd.read_excel(file, dtype=str).fillna('')
             df.columns = [str(c).strip().upper() for c in df.columns]
             
-            # Verificar columnas mínimas obligatorias
+            # Columnas requeridas en el Excel
             requeridos = ['NUMERO_DOC', 'NOMBRE_APELLIDO', 'NOMBRE_CARRERA', 'CODIGO_ALDEA', 'TRAMO', 'PERIODO']
             faltantes = [col for col in requeridos if col not in df.columns]
             
             if faltantes:
-                flash(f'⛔ Faltan columnas en el Excel: {", ".join(faltantes)}', 'danger')
+                flash(f'⛔ El Excel no tiene las columnas: {", ".join(faltantes)}', 'danger')
                 return redirect(request.url)
 
-            exitos = 0
-            errores = []
+            exitos, errores = 0, []
             
             for idx, row in df.iterrows():
-                linea = idx + 2  # +2 para indicar la fila real en Excel (1 encabezado + índice base 0)
-                
+                linea = idx + 2
                 try:
-                    # 1. Leer y limpiar datos
-                    # Usamos split('.')[0] por si acaso algún número se coló con decimal
+                    # Limpieza de datos
                     ndoc = row.get('NUMERO_DOC', '').split('.')[0].strip()
-                    tipo_doc = row.get('TIPO_DOC', 'V').strip().upper()
-                    if not tipo_doc: tipo_doc = 'V'  # Por defecto 'V'
-                    
                     nombre = row.get('NOMBRE_APELLIDO', '').strip().upper()
                     caldea = row.get('CODIGO_ALDEA', '').strip().upper()
                     ncarrera = row.get('NOMBRE_CARRERA', '').strip().upper()
                     ntramo = row.get('TRAMO', '').strip().upper()
                     nperiodo = row.get('PERIODO', '').strip().upper()
-                    
-                    # 2. Validación básica de campos vacíos
-                    if not ndoc or not nombre or not caldea or not ncarrera or not ntramo or not nperiodo:
-                        errores.append(f"Fila {linea}: Faltan datos obligatorios (Cédula, Nombre, Aldea, Carrera, Tramo o Período).")
-                        continue 
-                        
-                    # 3. --- BLINDAJE: VALIDAR EXISTENCIA EN BD ---
+                    tipo_doc = row.get('TIPO_DOC', 'V').strip().upper() or 'V'
+
+                    # Validaciones de existencia
+                    if not all([ndoc, nombre, caldea, ncarrera, ntramo, nperiodo]):
+                        errores.append(f"Fila {linea}: Faltan campos obligatorios.")
+                        continue
+
                     aldea = AldeaUniversitaria.query.filter_by(_codigo=caldea).first()
                     if not aldea:
-                        errores.append(f"Fila {linea}: Código de Aldea '{caldea}' no existe.")
+                        errores.append(f"Fila {linea}: El código de aldea '{caldea}' no existe.")
                         continue
 
                     carrera = Carrera.query.filter_by(_nombre=ncarrera).first()
                     if not carrera:
-                        errores.append(f"Fila {linea}: Carrera '{ncarrera}' no existe en el catálogo.")
+                        errores.append(f"Fila {linea}: La carrera '{ncarrera}' no está registrada.")
                         continue
 
                     tramo = Tramo.query.filter_by(nombre=ntramo).first()
                     if not tramo:
-                        errores.append(f"Fila {linea}: Tramo '{ntramo}' no es válido.")
+                        errores.append(f"Fila {linea}: El tramo '{ntramo}' no es válido.")
                         continue
 
                     per = PeriodoAcademico.query.filter_by(nombre=nperiodo).first()
                     if not per:
-                        errores.append(f"Fila {linea}: Período '{nperiodo}' no es válido.")
+                        errores.append(f"Fila {linea}: El período '{nperiodo}' no existe.")
                         continue
-                        
-                    # 4. Duplicidad de estudiante
-                    existente = Estudiante.query.filter_by(numero_documento=ndoc).first()
-                    if existente:
-                        errores.append(f"Fila {linea}: La cédula {ndoc} ya pertenece al estudiante {existente.nombre_apellido}.")
-                        continue
-                    
-                    # 5. Procesar Fecha de Nacimiento (con prevención de errores)
-                    fecha_nac = None
-                    raw_fecha = row.get('FECHA_NACIMIENTO', '')
-                    if raw_fecha:
-                        try:
-                            # pd.to_datetime interpreta bien fechas de Excel
-                            fecha_nac = pd.to_datetime(raw_fecha).date()
-                        except Exception:
-                            errores.append(f"Fila {linea}: Formato de fecha de nacimiento inválido '{raw_fecha}'.")
-                            continue  # Rechazamos la fila si la fecha está mala para cuidar la BD
 
-                    # 6. --- CREACIÓN ---
-                    new_st = Estudiante(
+                    if Estudiante.query.filter_by(numero_documento=ndoc).first():
+                        errores.append(f"Fila {linea}: La cédula {ndoc} ya existe en el sistema.")
+                        continue
+
+                    # Procesar Fecha
+                    fecha_nac = None
+                    raw_f = row.get('FECHA_NACIMIENTO', '')
+                    if raw_f:
+                        try: fecha_nac = pd.to_datetime(raw_f).date()
+                        except: pass
+
+                    # Crear registro
+                    nuevo = Estudiante(
                         tipo_documento=tipo_doc,
                         numero_documento=ndoc,
                         nombre_apellido=nombre,
@@ -963,50 +942,34 @@ def importar_estudiantes():
                         telefono=row.get('TELEFONO', '').strip(),
                         fecha_nacimiento=fecha_nac,
                         genero=row.get('GENERO', '').strip().upper(),
-                        
-                        # Asignamos los IDs obtenidos en la validación
                         carrera_id=carrera.id,
                         aldea_id=aldea.id,
                         tramo_id=tramo.id,
                         periodo_id=per.id,
-                        
                         cargado_por='CARGA_MASIVA'
                     )
-                    db.session.add(new_st)
+                    db.session.add(nuevo)
                     exitos += 1
                     
-                except Exception as e_fila:
-                    errores.append(f"Fila {linea}: Error interno en datos -> {str(e_fila)}")
-            
-            # 7. Confirmar cambios en la base de datos (Protegido con Rollback)
+                except Exception as e:
+                    errores.append(f"Fila {linea}: Error de formato o datos ({str(e)})")
+
             if exitos > 0:
-                try:
-                    db.session.commit()
-                    flash(f'✅ Importación finalizada. Registrados exitosamente: {exitos}.', 'success')
-                except Exception as e_db:
-                    db.session.rollback()
-                    flash(f'⛔ Error crítico al guardar en Base de Datos: {str(e_db)}', 'danger')
-                    exitos = 0
+                db.session.commit()
+                flash(f'✅ Éxito: {exitos} estudiantes importados.', 'success')
             
-            # 8. Mostrar errores (Limitado a 15 para no romper la memoria de sesión/cookies)
             if errores:
-                total_err = len(errores)
                 msg = "<br>".join(errores[:15])
-                if total_err > 15: 
-                    msg += f"<br><b>... y {total_err - 15} errores más omitidos.</b>"
-                
-                # Si fallaron todos, alerta roja. Si algunos pasaron, alerta amarilla.
-                tipo_alerta = 'warning' if exitos > 0 else 'danger'
-                flash(f'⚠️ Se detectaron problemas en {total_err} filas:<br>{msg}', tipo_alerta)
+                if len(errores) > 15: msg += f"<br>... y {len(errores)-15} errores más."
+                flash(f'⚠️ Problemas encontrados:<br>{msg}', 'warning' if exitos > 0 else 'danger')
                 
         except Exception as e:
-            flash(f'⛔ Error crítico procesando el archivo. Revise el formato: {e}', 'danger')
+            db.session.rollback()
+            flash(f'⛔ Error al procesar el archivo: {str(e)}', 'danger')
             
-        # Refrescar la página después del POST
         return redirect(request.url)
-        
-    # GET: Mostrar plantilla
-    return render_template('importar.html', tramos=tramos_activos, periodos=periodos_activos)
+
+    return render_template('importar.html', tramos=tramos_activos, periodos=periodos_activos, aldeas=aldeas_activas)
 
 @app.route('/reportes', methods=['GET', 'POST'])
 @login_required
