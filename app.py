@@ -732,19 +732,42 @@ def editar_estudiante(estudiante_id):
     est = db.session.get(Estudiante, estudiante_id)
     tramos = Tramo.query.all()
     periodos = PeriodoAcademico.query.all()
-    carreras = Carrera.query.all() # Necesario para mostrar la actual
+    carreras = Carrera.query.all()
     
     if request.method == 'POST':
-        est.numero_documento = request.form.get('numero_documento')
-        est.nombre_apellido = request.form.get('nombre_apellido')
-        est.carrera_id = request.form.get('carrera_id')
-        est.tramo_id = request.form.get('tramo_id')
-        est.periodo_id = request.form.get('periodo_id')
-        # ... actualizar resto ...
-        db.session.commit()
-        return redirect(url_for('listar_estudiantes', aldea_id=est.aldea_id))
-        
-    return render_template('editar_estudiante.html', estudiante=est, tramos=tramos, periodos=periodos, carreras=carreras)
+        try:
+            # CORRECCIÓN: Los nombres deben coincidir con name="..." del HTML
+            est.tipo_documento = request.form.get('tipo_documento')
+            est.cedula = request.form.get('cedula') # Antes tenías 'numero_documento'
+            est.nombre_apellido = request.form.get('nombre_apellido')
+            est.sexo = request.form.get('sexo')
+            est.telefono = request.form.get('telefono')
+            est.correo = request.form.get('correo')
+            
+            # Relaciones académicas
+            est.carrera_id = request.form.get('carrera_id')
+            est.tramo_id = request.form.get('tramo_id')
+            est.periodo_id = request.form.get('periodo_id')
+
+            # Manejo de la fecha (Conversión de string a objeto date)
+            fecha_nac = request.form.get('fecha_nacimiento')
+            if fecha_nac:
+                from datetime import datetime
+                est.fecha_nacimiento = datetime.strptime(fecha_nac, '%Y-%m-%d').date()
+
+            db.session.commit()
+            flash("Estudiante actualizado correctamente", "success")
+            return redirect(url_for('listar_estudiantes', aldea_id=est.aldea_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar: {str(e)}", "danger")
+            
+    return render_template('editar_estudiante.html', 
+                           estudiante=est, 
+                           tramos=tramos, 
+                           periodos=periodos, 
+                           carreras=carreras)
 
 @app.route('/estudiantes/<int:estudiante_id>/eliminar', methods=['POST'])
 @roles_required(['SUPER_USUARIO', 'ANALISTA', 'COORDINADOR'])
