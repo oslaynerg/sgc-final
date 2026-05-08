@@ -1,6 +1,7 @@
 import os
 import io
 import csv
+from markupsafe import Markup
 import pandas as pd
 from datetime import datetime
 from functools import wraps
@@ -858,10 +859,11 @@ import pandas as pd
 @app.route('/importar/estudiantes', methods=['GET', 'POST'])
 @roles_required(['SUPER_USUARIO'])
 def importar_estudiantes():
-    # 1. Cargar datos para la Guía de Datos del HTML
+    # 1. Cargar datos para la Guía de Datos del HTML (¡Ahora incluyendo Carreras!)
     tramos_activos = Tramo.query.order_by(Tramo.nombre).all()
     periodos_activos = PeriodoAcademico.query.order_by(PeriodoAcademico.nombre.desc()).all()
     aldeas_activas = AldeaUniversitaria.query.order_by(AldeaUniversitaria._nombre).all()
+    carreras_activas = Carrera.query.order_by(Carrera._nombre).all() # <--- NUEVO
 
     if request.method == 'POST':
         file = request.files.get('archivo_excel')
@@ -871,11 +873,9 @@ def importar_estudiantes():
             return redirect(request.url)
             
         try:
-            # Leer como string para evitar que las cédulas se vuelvan decimales (123.0)
             df = pd.read_excel(file, dtype=str).fillna('')
             df.columns = [str(c).strip().upper() for c in df.columns]
             
-            # Columnas requeridas en el Excel
             requeridos = ['NUMERO_DOC', 'NOMBRE_APELLIDO', 'NOMBRE_CARRERA', 'CODIGO_ALDEA', 'TRAMO', 'PERIODO']
             faltantes = [col for col in requeridos if col not in df.columns]
             
@@ -888,7 +888,7 @@ def importar_estudiantes():
             for idx, row in df.iterrows():
                 linea = idx + 2
                 try:
-                    # Limpieza de datos
+                    # Limpieza básica inicial
                     ndoc = row.get('NUMERO_DOC', '').split('.')[0].strip()
                     nombre = row.get('NOMBRE_APELLIDO', '').strip().upper()
                     caldea = row.get('CODIGO_ALDEA', '').strip().upper()
@@ -897,33 +897,41 @@ def importar_estudiantes():
                     nperiodo = row.get('PERIODO', '').strip().upper()
                     tipo_doc = row.get('TIPO_DOC', 'V').strip().upper() or 'V'
 
-                    # Validaciones de existencia
+                    # --- NUEVO: ETIQUETA INTELIGENTE PARA ERRORES ---
+                    # Esto genera algo como: "Fila 5 [1234567 - JUAN PEREZ]"
+                    etiqueta = f"Fila {linea}"
+                    if ndoc and nombre:
+                        etiqueta += f" [{ndoc} - {nombre}]"
+                    elif ndoc or nombre:
+                        etiqueta += f" [{ndoc or nombre}]"
+                    
+                    # Usamos la etiqueta inteligente en lugar de solo "Fila X"
                     if not all([ndoc, nombre, caldea, ncarrera, ntramo, nperiodo]):
-                        errores.append(f"Fila {linea}: Faltan campos obligatorios.")
+                        errores.append(f"<b>{etiqueta}:</b> Faltan campos obligatorios.")
                         continue
 
                     aldea = AldeaUniversitaria.query.filter_by(_codigo=caldea).first()
                     if not aldea:
-                        errores.append(f"Fila {linea}: El código de aldea '{caldea}' no existe.")
+                        errores.append(f"<b>{etiqueta}:</b> El código de aldea '{caldea}' no existe.")
                         continue
 
                     carrera = Carrera.query.filter_by(_nombre=ncarrera).first()
                     if not carrera:
-                        errores.append(f"Fila {linea}: La carrera '{ncarrera}' no está registrada.")
+                        errores.append(f"<b>{etiqueta}:</b> La carrera '{ncarrera}' no está registrada.")
                         continue
 
                     tramo = Tramo.query.filter_by(nombre=ntramo).first()
                     if not tramo:
-                        errores.append(f"Fila {linea}: El tramo '{ntramo}' no es válido.")
+                        errores.append(f"<b>{etiqueta}:</b> El tramo '{ntramo}' no es válido.")
                         continue
 
                     per = PeriodoAcademico.query.filter_by(nombre=nperiodo).first()
                     if not per:
-                        errores.append(f"Fila {linea}: El período '{nperiodo}' no existe.")
+                        errores.append(f"<b>{etiqueta}:</b> El período '{nperiodo}' no existe.")
                         continue
 
                     if Estudiante.query.filter_by(numero_documento=ndoc).first():
-                        errores.append(f"Fila {linea}: La cédula {ndoc} ya existe en el sistema.")
+                        errores.append(f"<b>{etiqueta}:</b> La cédula ya existe en el sistema.")
                         continue
 
                     # Procesar Fecha
@@ -933,7 +941,6 @@ def importar_estudiantes():
                         try: fecha_nac = pd.to_datetime(raw_f).date()
                         except: pass
 
-                    # Crear registro
                     nuevo = Estudiante(
                         tipo_documento=tipo_doc,
                         numero_documento=ndoc,
@@ -952,7 +959,7 @@ def importar_estudiantes():
                     exitos += 1
                     
                 except Exception as e:
-                    errores.append(f"Fila {linea}: Error de formato o datos ({str(e)})")
+                    errores.append(f"<b>Fila {linea}:</b> Error de formato ({str(e)})")
 
             if exitos > 0:
                 db.session.commit()
@@ -960,8 +967,12 @@ def importar_estudiantes():
             
             if errores:
                 msg = "<br>".join(errores[:15])
-                if len(errores) > 15: msg += f"<br>... y {len(errores)-15} errores más."
-                flash(f'⚠️ Problemas encontrados:<br>{msg}', 'warning' if exitos > 0 else 'danger')
+                if len(errores) > 15: msg += f"<br><b>... y {len(errores)-15} errores más omitidos.</b>"
+                
+                # --- NUEVO: USO DE MARKUP ---
+                # Markup() le dice a Flask que el HTML interno es seguro y debe renderizarlo
+                tipo_alerta = 'warning' if exitos > 0 else 'danger'
+                flash(Markup(f'⚠️ Problemas encontrados:<br><br>{msg}'), tipo_alerta)
                 
         except Exception as e:
             db.session.rollback()
@@ -969,11 +980,17 @@ def importar_estudiantes():
             
         return redirect(request.url)
 
-    return render_template('importar.html', tramos=tramos_activos, periodos=periodos_activos, aldeas=aldeas_activas)
+    return render_template('importar.html', 
+                           tramos=tramos_activos, 
+                           periodos=periodos_activos, 
+                           aldeas=aldeas_activas, 
+                           carreras=carreras_activas) # <--- Enviamos las carreras al HTML
+
 
 @app.route('/reportes', methods=['GET', 'POST'])
 @login_required
 def reportes():
+
     # Cargar listas para filtros
     estados = Estado.query.order_by(Estado._nombre).all()
     carreras = Carrera.query.order_by(Carrera._nombre).all()
