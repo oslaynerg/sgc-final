@@ -853,6 +853,8 @@ def descargar_plantilla_estudiantes():
     output.seek(0)
     return send_file(output, download_name="plantilla_estudiantes.xlsx", as_attachment=True)
 
+import pandas as pd
+
 @app.route('/importar/estudiantes', methods=['GET', 'POST'])
 @roles_required(['SUPER_USUARIO'])
 def importar_estudiantes():
@@ -862,93 +864,107 @@ def importar_estudiantes():
 
     if request.method == 'POST':
         file = request.files.get('archivo_excel')
-        if not file or not file.filename.endswith('.xlsx'):
-            flash('⚠️ Archivo inválido. Debe ser .xlsx', 'danger')
+        
+        # Validar si subieron archivo y extensión
+        if not file or file.filename == '':
+            flash('⚠️ No se seleccionó ningún archivo.', 'danger')
+            return redirect(request.url)
+            
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            flash('⚠️ Archivo inválido. Debe ser un formato de Excel (.xlsx o .xls)', 'danger')
             return redirect(request.url)
             
         try:
-            df = pd.read_excel(file)
+            # TRUCO PRO: Leer todo como texto (str) evita que las cédulas se vuelvan decimales (ej: 12345.0)
+            df = pd.read_excel(file, dtype=str)
+            
+            # Reemplazar valores nulos (NaN) de Pandas por cadenas vacías para evitar errores de código
+            df = df.fillna('')
+            
             # Limpiar cabeceras (quitar espacios y poner mayúsculas)
             df.columns = [str(c).strip().upper() for c in df.columns]
             
-            # Verificar columnas mínimas
-            requeridos = ['NUMERO_DOC', 'NOMBRE_CARRERA', 'CODIGO_ALDEA', 'TRAMO', 'PERIODO']
+            # Verificar columnas mínimas obligatorias
+            requeridos = ['NUMERO_DOC', 'NOMBRE_APELLIDO', 'NOMBRE_CARRERA', 'CODIGO_ALDEA', 'TRAMO', 'PERIODO']
             faltantes = [col for col in requeridos if col not in df.columns]
             
             if faltantes:
                 flash(f'⛔ Faltan columnas en el Excel: {", ".join(faltantes)}', 'danger')
                 return redirect(request.url)
 
-            exitos, errores = 0, []
+            exitos = 0
+            errores = []
             
             for idx, row in df.iterrows():
-                linea = idx + 2 # Fila real en Excel
+                linea = idx + 2  # +2 para indicar la fila real en Excel (1 encabezado + índice base 0)
+                
                 try:
-                    # Leer datos limpios
-                    ndoc = str(row.get('NUMERO_DOC', '')).split('.')[0].strip()
-                    tipo_doc = str(row.get('TIPO_DOC', 'V')).strip().upper()
-                    nombre = str(row.get('NOMBRE_APELLIDO', '')).strip().upper()
+                    # 1. Leer y limpiar datos
+                    # Usamos split('.')[0] por si acaso algún número se coló con decimal
+                    ndoc = row.get('NUMERO_DOC', '').split('.')[0].strip()
+                    tipo_doc = row.get('TIPO_DOC', 'V').strip().upper()
+                    if not tipo_doc: tipo_doc = 'V'  # Por defecto 'V'
                     
-                    caldea = str(row.get('CODIGO_ALDEA', '')).strip().upper()
-                    ncarrera = str(row.get('NOMBRE_CARRERA', '')).strip().upper()
+                    nombre = row.get('NOMBRE_APELLIDO', '').strip().upper()
+                    caldea = row.get('CODIGO_ALDEA', '').strip().upper()
+                    ncarrera = row.get('NOMBRE_CARRERA', '').strip().upper()
+                    ntramo = row.get('TRAMO', '').strip().upper()
+                    nperiodo = row.get('PERIODO', '').strip().upper()
                     
-                    ntramo = str(row.get('TRAMO', '')).strip().upper()
-                    nperiodo = str(row.get('PERIODO', '')).strip().upper()
-                    
-                    # Validación básica de campos vacíos
-                    if not ndoc or not caldea or not ncarrera:
-                        errores.append(f"Fila {linea}: Faltan datos obligatorios (Cédula, Aldea o Carrera).")
+                    # 2. Validación básica de campos vacíos
+                    if not ndoc or not nombre or not caldea or not ncarrera or not ntramo or not nperiodo:
+                        errores.append(f"Fila {linea}: Faltan datos obligatorios (Cédula, Nombre, Aldea, Carrera, Tramo o Período).")
                         continue 
                         
-                    # --- BLINDAJE: VALIDAR EXISTENCIA EN BD ---
-                    
-                    # 1. Aldea
+                    # 3. --- BLINDAJE: VALIDAR EXISTENCIA EN BD ---
                     aldea = AldeaUniversitaria.query.filter_by(_codigo=caldea).first()
                     if not aldea:
                         errores.append(f"Fila {linea}: Código de Aldea '{caldea}' no existe.")
                         continue
 
-                    # 2. Carrera (Búsqueda exacta)
                     carrera = Carrera.query.filter_by(_nombre=ncarrera).first()
                     if not carrera:
                         errores.append(f"Fila {linea}: Carrera '{ncarrera}' no existe en el catálogo.")
                         continue
 
-                    # 3. Tramo (Búsqueda exacta)
                     tramo = Tramo.query.filter_by(nombre=ntramo).first()
                     if not tramo:
-                        errores.append(f"Fila {linea}: Tramo '{ntramo}' no es válido. Verifique la lista.")
+                        errores.append(f"Fila {linea}: Tramo '{ntramo}' no es válido.")
                         continue
 
-                    # 4. Período (Búsqueda exacta)
                     per = PeriodoAcademico.query.filter_by(nombre=nperiodo).first()
                     if not per:
                         errores.append(f"Fila {linea}: Período '{nperiodo}' no es válido.")
                         continue
                         
-                    # 5. Duplicidad de estudiante
-                    if Estudiante.query.filter_by(numero_documento=ndoc, tipo_documento=tipo_doc).first():
-                        errores.append(f"Fila {linea}: Estudiante {ndoc} ya existe.")
+                    # 4. Duplicidad de estudiante
+                    existente = Estudiante.query.filter_by(numero_documento=ndoc).first()
+                    if existente:
+                        errores.append(f"Fila {linea}: La cédula {ndoc} ya pertenece al estudiante {existente.nombre_apellido}.")
                         continue
                     
-                    # --- CREACIÓN ---
-                    
-                    # Procesar fecha opcional
+                    # 5. Procesar Fecha de Nacimiento (con prevención de errores)
                     fecha_nac = None
-                    if pd.notnull(row.get('FECHA_NACIMIENTO')):
-                        try: fecha_nac = pd.to_datetime(row.get('FECHA_NACIMIENTO')).date()
-                        except: pass
+                    raw_fecha = row.get('FECHA_NACIMIENTO', '')
+                    if raw_fecha:
+                        try:
+                            # pd.to_datetime interpreta bien fechas de Excel
+                            fecha_nac = pd.to_datetime(raw_fecha).date()
+                        except Exception:
+                            errores.append(f"Fila {linea}: Formato de fecha de nacimiento inválido '{raw_fecha}'.")
+                            continue  # Rechazamos la fila si la fecha está mala para cuidar la BD
 
+                    # 6. --- CREACIÓN ---
                     new_st = Estudiante(
                         tipo_documento=tipo_doc,
                         numero_documento=ndoc,
                         nombre_apellido=nombre,
-                        correo=str(row.get('CORREO', '')).strip(),
-                        telefono=str(row.get('TELEFONO', '')).strip(),
+                        correo=row.get('CORREO', '').strip(),
+                        telefono=row.get('TELEFONO', '').strip(),
                         fecha_nacimiento=fecha_nac,
-                        genero=str(row.get('GENERO', '')).strip().upper(),
+                        genero=row.get('GENERO', '').strip().upper(),
                         
-                        # Asignamos los IDs encontrados
+                        # Asignamos los IDs obtenidos en la validación
                         carrera_id=carrera.id,
                         aldea_id=aldea.id,
                         tramo_id=tramo.id,
@@ -959,90 +975,38 @@ def importar_estudiantes():
                     db.session.add(new_st)
                     exitos += 1
                     
-                except Exception as e:
-                    errores.append(f"Fila {linea}: Error interno ({str(e)})")
+                except Exception as e_fila:
+                    errores.append(f"Fila {linea}: Error interno en datos -> {str(e_fila)}")
             
-            # Confirmar cambios si hubo éxitos
+            # 7. Confirmar cambios en la base de datos (Protegido con Rollback)
             if exitos > 0:
-                db.session.commit()
-                flash(f'✅ Importación finalizada. Registrados: {exitos}.', 'success')
-            
-            # Mostrar errores (Limitado a 10 para no saturar)
-            if errores:
-                msg = "<br>".join(errores[:10])
-                if len(errores) > 10: msg += f"<br>... y {len(errores)-10} errores más."
-                flash(f'⚠️ Se encontraron errores en {len(errores)} filas:<br>{msg}', 'warning')
-                
-        except Exception as e:
-            flash(f'⛔ Error crítico procesando archivo: {e}', 'danger')
-            
-    # PASAR LAS LISTAS AL TEMPLATE PARA LA "GUÍA DE DATOS"
-    return render_template('importar.html', tramos=tramos_activos, periodos=periodos_activos)
-    if request.method == 'POST':
-        file = request.files.get('archivo_excel')
-        if not file or not file.filename.endswith('.xlsx'):
-            flash('Archivo inválido.', 'danger')
-            return redirect(request.url)
-            
-        try:
-            df = pd.read_excel(file)
-            df.columns = [str(c).strip().upper() for c in df.columns]
-            
-            exitos, errores = 0, []
-            
-            for idx, row in df.iterrows():
                 try:
-                    linea = idx + 2
-                    ndoc = str(row.get('NUMERO_DOC', '')).split('.')[0].strip()
-                    caldea = str(row.get('CODIGO_ALDEA', '')).strip().upper()
-                    ncarrera = str(row.get('NOMBRE_CARRERA', '')).strip().upper()
-                    ntramo = str(row.get('TRAMO', '')).strip().upper()
-                    nperiodo = str(row.get('PERIODO', '')).strip().upper()
-                    
-                    if not ndoc or not caldea or not ncarrera:
-                        continue 
-                        
-                    # Validar existencias
-                    aldea = AldeaUniversitaria.query.filter_by(_codigo=caldea).first()
-                    carrera = Carrera.query.filter_by(_nombre=ncarrera).first()
-                    tramo = Tramo.query.filter_by(nombre=ntramo).first()
-                    per = PeriodoAcademico.query.filter_by(nombre=nperiodo).first()
-                    
-                    if not aldea or not carrera or not tramo or not per:
-                        errores.append(f"Fila {linea}: Datos referenciales no encontrados.")
-                        continue
-                        
-                    if Estudiante.query.filter_by(numero_documento=ndoc).first():
-                        errores.append(f"Fila {linea}: Estudiante ya existe.")
-                        continue
-                        
-                    # Crear
-                    new_st = Estudiante(
-                        tipo_documento=str(row.get('TIPO_DOC', 'V')).strip().upper(),
-                        numero_documento=ndoc,
-                        nombre_apellido=str(row.get('NOMBRE_APELLIDO', '')).strip().upper(),
-                        carrera_id=carrera.id,
-                        aldea_id=aldea.id,
-                        tramo_id=tramo.id,
-                        periodo_id=per.id,
-                        cargado_por='CARGA_MASIVA'
-                    )
-                    db.session.add(new_st)
-                    exitos += 1
-                    
-                except Exception as e:
-                    errores.append(f"Error fila {idx+2}: {e}")
+                    db.session.commit()
+                    flash(f'✅ Importación finalizada. Registrados exitosamente: {exitos}.', 'success')
+                except Exception as e_db:
+                    db.session.rollback()
+                    flash(f'⛔ Error crítico al guardar en Base de Datos: {str(e_db)}', 'danger')
+                    exitos = 0
             
-            if exitos > 0:
-                db.session.commit()
-                flash(f'Importados {exitos} registros.', 'success')
+            # 8. Mostrar errores (Limitado a 15 para no romper la memoria de sesión/cookies)
             if errores:
-                flash(f'Errores: {len(errores)}.', 'warning')
+                total_err = len(errores)
+                msg = "<br>".join(errores[:15])
+                if total_err > 15: 
+                    msg += f"<br><b>... y {total_err - 15} errores más omitidos.</b>"
+                
+                # Si fallaron todos, alerta roja. Si algunos pasaron, alerta amarilla.
+                tipo_alerta = 'warning' if exitos > 0 else 'danger'
+                flash(f'⚠️ Se detectaron problemas en {total_err} filas:<br>{msg}', tipo_alerta)
                 
         except Exception as e:
-            flash(f'Error procesando archivo: {e}', 'danger')
+            flash(f'⛔ Error crítico procesando el archivo. Revise el formato: {e}', 'danger')
             
-    return render_template('importar.html')
+        # Refrescar la página después del POST
+        return redirect(request.url)
+        
+    # GET: Mostrar plantilla
+    return render_template('importar.html', tramos=tramos_activos, periodos=periodos_activos)
 
 @app.route('/reportes', methods=['GET', 'POST'])
 @login_required
