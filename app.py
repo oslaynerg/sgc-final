@@ -4,7 +4,7 @@ import csv
 import pandas as pd
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, make_response, send_from_directory
 from sqlalchemy import func
 from dotenv import load_dotenv
 
@@ -702,27 +702,48 @@ def agregar_estudiante(aldea_id):
 
     if request.method == 'POST':
         try:
+            numero_doc = request.form.get('numero_documento')
+
+            # --- VALIDACIÓN DE DUPLICADOS ---
+            # Verificamos si la cédula ya existe en todo el sistema antes de guardar
+            existente = Estudiante.query.filter_by(numero_documento=numero_doc).first()
+            if existente:
+                flash(f"Error: La cédula {numero_doc} ya está registrada para {existente.nombre_apellido}.", "danger")
+                return redirect(request.url)
+
+            # Captura y conversión de fecha
             f_str = request.form.get('fecha_nacimiento')
+            if f_str:
+                from datetime import datetime
+                fecha_nac = datetime.strptime(f_str, '%Y-%m-%d').date()
+            else:
+                fecha_nac = None
+
+            # Creación del nuevo estudiante
             nuevo = Estudiante(
                 tipo_documento=request.form.get('tipo_documento'),
-                numero_documento=request.form.get('numero_documento'),
+                numero_documento=numero_doc,
                 nombre_apellido=request.form.get('nombre_apellido'),
                 correo=request.form.get('correo'),
                 telefono=request.form.get('telefono'),
-                fecha_nacimiento=datetime.strptime(f_str, '%Y-%m-%d').date() if f_str else None,
+                fecha_nacimiento=fecha_nac,
                 genero=request.form.get('genero'),
                 carrera_id=request.form.get('carrera_id'),
                 tramo_id=request.form.get('tramo_id'),
                 periodo_id=request.form.get('periodo_id'),
                 aldea_id=aldea.id
             )
+            
             db.session.add(nuevo)
             db.session.commit()
-            flash('Estudiante agregado.', 'success')
+            flash('Estudiante agregado exitosamente.', 'success')
             return redirect(url_for('listar_estudiantes', aldea_id=aldea.id))
+            
         except Exception as e:
             db.session.rollback()
-            return render_template('agregar_estudiante.html', aldea=aldea, tramos=tramos, periodos=periodos, error=f"Error: {e}")
+            # Usamos flash en lugar de pasar el error al render_template para ser consistentes
+            flash(f"Error crítico al guardar: {str(e)}", "danger")
+            return redirect(request.url)
 
     return render_template('agregar_estudiante.html', aldea=aldea, tramos=tramos, periodos=periodos)
 
